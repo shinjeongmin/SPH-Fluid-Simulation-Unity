@@ -167,6 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28dd704b55ec3a94aaa93246239a690d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  collisionSphere: {fileID: 1168886303}
   showSpheres: 1
   numToSpawn: {x: 10, y: 10, z: 10}
   boxSize: {x: 4, y: 10, z: 3}
