@@ -32,7 +32,7 @@ float3 boxSize;
 float3 spherePos;
 float sphereRadius;
 
-[numthreads(100,1,1)]
+[numthreads(256,1,1)]
 void Integrate (uint3 id: SV_DISPATCHTHREADID) {
 	
 	float3 vel = _particles[id.x].velocity + ((_particles[id.x].currentForce / particleMass) * timestep);
@@ -77,7 +77,7 @@ float StdKernel (float distanceSquared) {
 	return 315.f / (64.f * pi * radius3) * x * x * x;
 }
 
-[numthreads(100,1,1)]
+[numthreads(256,1,1)]
 void ComputeDensityPressure (uint3 id: SV_DISPATCHTHREADID) {
 	float3 origin = _particles[id.x].position;
 	float sum = 0;
@@ -110,7 +110,7 @@ float3 SpikyKernelGradient (float distance, float3 direction){
 	return SpikyKernelFirstDerivative(distance) * direction;
 }
 
-[numthreads(100,1,1)]
+[numthreads(256,1,1)]
 void ComputeForces (uint3 id : SV_DISPATCHTHREADID) {
 	
 	float3 origin = _particles[id.x].position;

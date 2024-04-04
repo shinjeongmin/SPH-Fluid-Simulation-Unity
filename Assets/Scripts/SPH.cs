@@ -141,10 +141,10 @@ public class SPH : MonoBehaviour
         shader.SetVector("spherePos", collisionSphere.transform.position);
         shader.SetFloat("sphereRadius", collisionSphere.transform.localScale.x/2);
 
-        // Total Particles has to be divisible by 100
-        shader.Dispatch(densityPressureKernel, totalParticles / 100, 1, 1);
-        shader.Dispatch(computeForceKernel, totalParticles / 100, 1, 1);
-        shader.Dispatch(integrateKernel, totalParticles / 100, 1, 1);
+        // Total Particles has to be divisible by 256
+        shader.Dispatch(densityPressureKernel, totalParticles / 256, 1, 1);
+        shader.Dispatch(computeForceKernel, totalParticles / 256, 1, 1);
+        shader.Dispatch(integrateKernel, totalParticles / 256, 1, 1);
     }
 
     private void SetupComputeBuffers()
