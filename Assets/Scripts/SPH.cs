@@ -60,6 +60,7 @@ public class SPH : MonoBehaviour
     private int computeForceKernel;
     private int densityPressureKernel;
     private int hashParticlesKernel;
+    private int sortKernel;
 
     private void Awake(){
         SpawnParticlesInBox(); // spawn particles
@@ -159,6 +160,9 @@ public class SPH : MonoBehaviour
 
         // Total Particles has to be divisible by 256
         shader.Dispatch(hashParticlesKernel, totalParticles / 256, 1, 1);
+
+        SortParticles();
+
         shader.Dispatch(densityPressureKernel, totalParticles / 256, 1, 1);
         shader.Dispatch(computeForceKernel, totalParticles / 256, 1, 1);
         shader.Dispatch(integrateKernel, totalParticles / 256, 1, 1);
@@ -170,6 +174,7 @@ public class SPH : MonoBehaviour
         computeForceKernel = shader.FindKernel("ComputeForces");
         densityPressureKernel = shader.FindKernel("ComputeDensityPressure");
         hashParticlesKernel = shader.FindKernel("HashParticles");
+        sortKernel = shader.FindKernel("BitonicSort");
 
         shader.SetInt("particleLength", totalParticles);
         shader.SetFloat("particleMass", particleMass);
@@ -194,13 +199,27 @@ public class SPH : MonoBehaviour
         shader.SetBuffer(computeForceKernel, "_particleIndices", _particleIndices);
         shader.SetBuffer(densityPressureKernel, "_particleIndices", _particleIndices);
         shader.SetBuffer(hashParticlesKernel, "_particleIndices", _particleIndices);
+        shader.SetBuffer(sortKernel, "_particleIndices", _particleIndices);
 
         shader.SetBuffer(computeForceKernel, "_particleCellIndices", _particleCellIndices);
         shader.SetBuffer(densityPressureKernel, "_particleCellIndices", _particleCellIndices);
         shader.SetBuffer(hashParticlesKernel, "_particleCellIndices", _particleCellIndices);
+        shader.SetBuffer(sortKernel, "_particleCellIndices", _particleCellIndices);
 
         shader.SetBuffer(computeForceKernel, "_cellOffsets", _cellOffsets);
         shader.SetBuffer(densityPressureKernel, "_cellOffsets", _cellOffsets);
         shader.SetBuffer(hashParticlesKernel, "_cellOffsets", _cellOffsets);
+    }
+
+    private void SortParticles()
+    {
+        
+        for (var dim = 2; dim <= totalParticles; dim <<= 1) {
+            shader.SetInt("dim", dim);
+            for (var block = dim >> 1; block > 0; block >>= 1) {
+                shader.SetInt("block", block);
+                shader.Dispatch(sortKernel, totalParticles / 256, 1, 1);
+            }
+        }
     }
 }

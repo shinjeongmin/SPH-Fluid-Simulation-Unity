@@ -1,6 +1,8 @@
 #pragma kernel Integrate // Use the force of each particle to move particle
 #pragma kernel ComputeForces // Compute forces for each particle
 #pragma kernel ComputeDensityPressure // Compute density/pressure for each particle
+#pragma kernel HashParticles
+#pragma kernel BitonicSort
 
 struct Particle {
 	float pressure;
@@ -33,6 +35,37 @@ float timestep;
 float3 boxSize;
 float3 spherePos;
 float sphereRadius;
+
+// Sorting variables
+int block;
+int dim;
+
+// Optimization
+
+int3 GetCell(float3 position) {
+	float3 halfS = boxSize / 2;
+	return int3((position.x + halfS.x)/radius, (position.y+halfS.y)/radius, (position.z+halfS.z)/radius);
+}
+
+inline uint HashCell(in int3 cellIndex) {
+	const uint p1 = 73856093; // some large primes
+	const uint p2 = 19349663;
+	const uint p3 = 83492791;
+
+	int n = p1 * cellIndex.x ^ p2 * cellIndex.y ^ p3 * cellIndex.z;
+	n %= particleLength;
+
+	return n;
+}
+
+[numthreads(256,1,1)]
+void HashParticles (uint3 id: SV_DISPATCHTHREADID) {
+	
+	_cellOffsets[id.x] = 99999999; // Clear cell offsets
+
+	uint particleIndex = _particleIndices[id.x];
+	_particleCellIndices[particleIndex] = HashCell(GetCell(_particles[particleIndex].position));
+}
 
 [numthreads(256,1,1)]
 void Integrate (uint3 id: SV_DISPATCHTHREADID) {
@@ -150,29 +183,23 @@ void ComputeForces (uint3 id : SV_DISPATCHTHREADID) {
 	}
 }
 
-// Optimization
-
-int3 GetCell(float3 position) {
-	float3 halfS = boxSize / 2;
-	return int3((position.x + halfS.x)/radius, (position.y+halfS.y)/radius, (position.z+halfS.z)/radius);
-}
-
-inline uint HashCell(in int3 cellIndex) {
-	const uint p1 = 73856093; // some large primes
-	const uint p2 = 19349663;
-	const uint p3 = 83492791;
-
-	int n = p1 * cellIndex.x ^ p2 * cellIndex.y ^ p3 * cellIndex.z;
-	n %= particleLength;
-
-	return n;
-}
-
 [numthreads(256,1,1)]
-void HashParticles (uint3 id: SV_DISPATCHTHREADID) {
+void BitonicSort (uint3 id: SV_DISPATCHTHREADID) {
 	
-	_cellOffsets[id.x] = 99999999; // Clear cell offsets
+	uint i = id.x + id.y * 256 * 1024;
+	uint j = i^block;
 
-	uint particleIndex = _particleIndices[id.x];
-	_particleCellIndices[particleIndex] = HashCell(GetCell(_particles[particleIndex].position));
+	if(j < i || i >= particleLength)
+		return;
+
+	uint key_i = _particleIndices[i];
+	uint key_j = _particleIndices[j];
+	float value_i = _particleCellIndices[key_i];
+	float value_j = _particleCellIndices[key_j];
+
+	float diff = (value_i - value_j) * ((i & dim) == 0 ? 1 : -1);
+	if (diff > 0) {
+		_particleIndices[i] = key_j;
+		_particleIndices[j] = key_i;
+	}
 }
