@@ -11,6 +11,9 @@ struct Particle {
 };
 
 RWStructuredBuffer<Particle> _particles;
+RWStructuredBuffer<uint> _particleIndices;
+RWStructuredBuffer<uint> _particleCellIndices;
+RWStructuredBuffer<uint> _cellOffsets;
 
 // Variable Declarations
 
@@ -25,10 +28,9 @@ float radius3;
 float radius4;
 float radius5;
 float pi;
-int particleLength;
+uint particleLength;
 float timestep;
 float3 boxSize;
-
 float3 spherePos;
 float sphereRadius;
 
@@ -146,4 +148,31 @@ void ComputeForces (uint3 id : SV_DISPATCHTHREADID) {
 	if (length(colDir) < sphereRadius) {
 		_particles[id.x].currentForce += colDir * 300;
 	}
+}
+
+// Optimization
+
+int3 GetCell(float3 position) {
+	float3 halfS = boxSize / 2;
+	return int3((position.x + halfS.x)/radius, (position.y+halfS.y)/radius, (position.z+halfS.z)/radius);
+}
+
+inline uint HashCell(in int3 cellIndex) {
+	const uint p1 = 73856093; // some large primes
+	const uint p2 = 19349663;
+	const uint p3 = 83492791;
+
+	int n = p1 * cellIndex.x ^ p2 * cellIndex.y ^ p3 * cellIndex.z;
+	n %= particleLength;
+
+	return n;
+}
+
+[numthreads(256,1,1)]
+void HashParticles (uint3 id: SV_DISPATCHTHREADID) {
+	
+	_cellOffsets[id.x] = 99999999; // Clear cell offsets
+
+	uint particleIndex = _particleIndices[id.x];
+	_particleCellIndices[particleIndex] = HashCell(GetCell(_particles[particleIndex].position));
 }
