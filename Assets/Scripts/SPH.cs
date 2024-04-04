@@ -51,6 +51,11 @@ public class SPH : MonoBehaviour
     // Private Variables
     private ComputeBuffer _argsBuffer;
     public ComputeBuffer _particlesBuffer;
+
+    private ComputeBuffer _particleIndices;
+    private ComputeBuffer _particleCellIndices;
+    private ComputeBuffer _cellOffsets;
+
     private int integrateKernel;
     private int computeForceKernel;
     private int densityPressureKernel;
@@ -74,6 +79,16 @@ public class SPH : MonoBehaviour
         // Setup Particle Buffer
         _particlesBuffer = new ComputeBuffer(totalParticles, 44);
         _particlesBuffer.SetData(particles);
+
+        _particleIndices = new ComputeBuffer(totalParticles, 4);
+        _particleCellIndices = new ComputeBuffer(totalParticles, 4);
+        _cellOffsets = new ComputeBuffer(totalParticles, 4);
+
+        uint[] particleIndices = new uint[totalParticles];
+
+        for (int i = 0; i < particleIndices.Length; i++) particleIndices[i] = (uint)i;
+
+        _particleIndices.SetData(particleIndices);
 
         SetupComputeBuffers();
     }
@@ -171,5 +186,14 @@ public class SPH : MonoBehaviour
         shader.SetBuffer(integrateKernel, "_particles", _particlesBuffer);
         shader.SetBuffer(computeForceKernel, "_particles", _particlesBuffer);
         shader.SetBuffer(densityPressureKernel, "_particles", _particlesBuffer);
+
+        shader.SetBuffer(computeForceKernel, "_particleIndices", _particleIndices);
+        shader.SetBuffer(densityPressureKernel, "_particleIndices", _particleIndices);
+
+        shader.SetBuffer(computeForceKernel, "_particleCellIndices", _particleCellIndices);
+        shader.SetBuffer(densityPressureKernel, "_particleCellIndices", _particleCellIndices);
+
+        shader.SetBuffer(computeForceKernel, "_cellOffsets", _cellOffsets);
+        shader.SetBuffer(densityPressureKernel, "_cellOffsets", _cellOffsets);
     }
 }
