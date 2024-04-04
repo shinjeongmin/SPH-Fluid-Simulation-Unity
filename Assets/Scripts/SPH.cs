@@ -59,6 +59,7 @@ public class SPH : MonoBehaviour
     private int integrateKernel;
     private int computeForceKernel;
     private int densityPressureKernel;
+    private int hashParticlesKernel;
 
     private void Awake(){
         SpawnParticlesInBox(); // spawn particles
@@ -157,6 +158,7 @@ public class SPH : MonoBehaviour
         shader.SetFloat("sphereRadius", collisionSphere.transform.localScale.x/2);
 
         // Total Particles has to be divisible by 256
+        shader.Dispatch(hashParticlesKernel, totalParticles / 256, 1, 1);
         shader.Dispatch(densityPressureKernel, totalParticles / 256, 1, 1);
         shader.Dispatch(computeForceKernel, totalParticles / 256, 1, 1);
         shader.Dispatch(integrateKernel, totalParticles / 256, 1, 1);
@@ -167,6 +169,7 @@ public class SPH : MonoBehaviour
         integrateKernel = shader.FindKernel("Integrate");
         computeForceKernel = shader.FindKernel("ComputeForces");
         densityPressureKernel = shader.FindKernel("ComputeDensityPressure");
+        hashParticlesKernel = shader.FindKernel("HashParticles");
 
         shader.SetInt("particleLength", totalParticles);
         shader.SetFloat("particleMass", particleMass);
@@ -186,14 +189,18 @@ public class SPH : MonoBehaviour
         shader.SetBuffer(integrateKernel, "_particles", _particlesBuffer);
         shader.SetBuffer(computeForceKernel, "_particles", _particlesBuffer);
         shader.SetBuffer(densityPressureKernel, "_particles", _particlesBuffer);
+        shader.SetBuffer(hashParticlesKernel, "_particles", _particlesBuffer);
 
         shader.SetBuffer(computeForceKernel, "_particleIndices", _particleIndices);
         shader.SetBuffer(densityPressureKernel, "_particleIndices", _particleIndices);
+        shader.SetBuffer(hashParticlesKernel, "_particleIndices", _particleIndices);
 
         shader.SetBuffer(computeForceKernel, "_particleCellIndices", _particleCellIndices);
         shader.SetBuffer(densityPressureKernel, "_particleCellIndices", _particleCellIndices);
+        shader.SetBuffer(hashParticlesKernel, "_particleCellIndices", _particleCellIndices);
 
         shader.SetBuffer(computeForceKernel, "_cellOffsets", _cellOffsets);
         shader.SetBuffer(densityPressureKernel, "_cellOffsets", _cellOffsets);
+        shader.SetBuffer(hashParticlesKernel, "_cellOffsets", _cellOffsets);
     }
 }
