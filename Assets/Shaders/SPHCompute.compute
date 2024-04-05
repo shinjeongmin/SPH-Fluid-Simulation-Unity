@@ -3,6 +3,7 @@
 #pragma kernel ComputeDensityPressure // Compute density/pressure for each particle
 #pragma kernel HashParticles
 #pragma kernel BitonicSort
+#pragma kernel CalculateCellOffsets
 
 struct Particle {
 	float pressure;
@@ -202,4 +203,13 @@ void BitonicSort (uint3 id: SV_DISPATCHTHREADID) {
 		_particleIndices[i] = key_j;
 		_particleIndices[j] = key_i;
 	}
+}
+
+[numthreads(256, 1, 1)]
+void CalculateCellOffsets (uint3 id: SV_DISPATCHTHREADID) {
+	
+	uint particleIndex = _particleIndices[id.x];
+	uint cellIndex = _particleCellIndices[particleIndex];
+
+	InterlockedMin(_cellOffsets[cellIndex], id.x);
 }
